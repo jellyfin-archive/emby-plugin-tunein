@@ -1,0 +1,9 @@
+C:\Users\Deano\source\repos\jellyfin-plugin-tunein\Jellyfin.Plugins.TuneIn\obj\Debug\netstandard2.0\Jellyfin.Plugins.TuneIn.csprojAssemblyReference.cache
+C:\Users\Deano\source\repos\jellyfin-plugin-tunein\Jellyfin.Plugins.TuneIn\obj\Debug\netstandard2.0\Jellyfin.Plugins.TuneIn.csproj.CoreCompileInputs.cache
+C:\Users\Deano\source\repos\jellyfin-plugin-tunein\Jellyfin.Plugins.TuneIn\obj\Debug\netstandard2.0\Jellyfin.Plugins.TuneIn.AssemblyInfoInputs.cache
+C:\Users\Deano\source\repos\jellyfin-plugin-tunein\Jellyfin.Plugins.TuneIn\obj\Debug\netstandard2.0\Jellyfin.Plugins.TuneIn.AssemblyInfo.cs
+C:\Users\Deano\source\repos\jellyfin-plugin-tunein\Jellyfin.Plugins.TuneIn\bin\Debug\netstandard2.0\Jellyfin.Plugins.TuneIn.deps.json
+C:\Users\Deano\source\repos\jellyfin-plugin-tunein\Jellyfin.Plugins.TuneIn\bin\Debug\netstandard2.0\Jellyfin.Plugins.TuneIn.dll
+C:\Users\Deano\source\repos\jellyfin-plugin-tunein\Jellyfin.Plugins.TuneIn\bin\Debug\netstandard2.0\Jellyfin.Plugins.TuneIn.pdb
+C:\Users\Deano\source\repos\jellyfin-plugin-tunein\Jellyfin.Plugins.TuneIn\obj\Debug\netstandard2.0\Jellyfin.Plugins.TuneIn.dll
+C:\Users\Deano\source\repos\jellyfin-plugin-tunein\Jellyfin.Plugins.TuneIn\obj\Debug\netstandard2.0\Jellyfin.Plugins.TuneIn.pdb

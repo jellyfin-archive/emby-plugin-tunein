@@ -1,0 +1,9 @@
+C:\Users\Deano\Source\Repos\jellyfin-plugin-tunein\MediaBrowser.Plugins.TuneIn\bin\Debug\netstandard2.0\MediaBrowser.Plugins.TuneIn.deps.json
+C:\Users\Deano\Source\Repos\jellyfin-plugin-tunein\MediaBrowser.Plugins.TuneIn\bin\Debug\netstandard2.0\MediaBrowser.Plugins.TuneIn.dll
+C:\Users\Deano\Source\Repos\jellyfin-plugin-tunein\MediaBrowser.Plugins.TuneIn\bin\Debug\netstandard2.0\MediaBrowser.Plugins.TuneIn.pdb
+C:\Users\Deano\Source\Repos\jellyfin-plugin-tunein\MediaBrowser.Plugins.TuneIn\obj\Debug\netstandard2.0\MediaBrowser.Plugins.TuneIn.csprojAssemblyReference.cache
+C:\Users\Deano\Source\Repos\jellyfin-plugin-tunein\MediaBrowser.Plugins.TuneIn\obj\Debug\netstandard2.0\MediaBrowser.Plugins.TuneIn.csproj.CoreCompileInputs.cache
+C:\Users\Deano\Source\Repos\jellyfin-plugin-tunein\MediaBrowser.Plugins.TuneIn\obj\Debug\netstandard2.0\MediaBrowser.Plugins.TuneIn.AssemblyInfoInputs.cache
+C:\Users\Deano\Source\Repos\jellyfin-plugin-tunein\MediaBrowser.Plugins.TuneIn\obj\Debug\netstandard2.0\MediaBrowser.Plugins.TuneIn.AssemblyInfo.cs
+C:\Users\Deano\Source\Repos\jellyfin-plugin-tunein\MediaBrowser.Plugins.TuneIn\obj\Debug\netstandard2.0\MediaBrowser.Plugins.TuneIn.dll
+C:\Users\Deano\Source\Repos\jellyfin-plugin-tunein\MediaBrowser.Plugins.TuneIn\obj\Debug\netstandard2.0\MediaBrowser.Plugins.TuneIn.pdb
