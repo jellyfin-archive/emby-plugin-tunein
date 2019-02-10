@@ -28,7 +28,7 @@ namespace Jellyfin.Plugins.TuneIn
         private readonly ILogger _logger;
         private readonly IApplicationHost _appHost;
 
-        private String partnerid { get; set; }
+        // private String partnerid { get; set; }
 
         public TuneInChannel(IHttpClient httpClient, ILoggerFactory loggerFactory, IApplicationHost appHost)
         {
@@ -36,7 +36,7 @@ namespace Jellyfin.Plugins.TuneIn
             _appHost = appHost;
             _logger = loggerFactory.CreateLogger(GetType().Name);
 
-            partnerid = "uD1X52pA";
+            // partnerid = "uD1X52pA";
         }
 
         public string DataVersion
@@ -112,8 +112,8 @@ namespace Jellyfin.Plugins.TuneIn
         {
             var page = new HtmlDocument();
             var items = new List<ChannelItemInfo>();
-            var url = "https://opml.radiotime.com/Browse.ashx?c=presets&formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
-                      _appHost.SystemId;
+            // "&partnerid=" + partnerid + ""
+            var url = "https://opml.radiotime.com/Browse.ashx?c=presets&formats=mp3,aac&serial=" + _appHost.SystemId;
 
             if (Plugin.Instance.Configuration.Username != null)
             {
@@ -174,8 +174,8 @@ namespace Jellyfin.Plugins.TuneIn
         {
             var page = new HtmlDocument();
             var items = new List<ChannelItemInfo>();
-            var url = "https://opml.radiotime.com/Browse.ashx?formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
-                      _appHost.SystemId;
+            // "&partnerid=" + partnerid + ""
+            var url = "https://opml.radiotime.com/Browse.ashx?formats=mp3,aac&serial=" + _appHost.SystemId;
 
             if (Plugin.Instance.Configuration.LatLon != null)
             {
