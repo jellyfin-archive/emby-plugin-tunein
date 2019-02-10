@@ -35,6 +35,11 @@ ProgramData*/
 ProgramData-Server*/
 ProgramData-UI*/
 
+######################
+## Visual Studio Code
+######################
+.vscode
+
 #################
 ## Visual Studio
 #################
