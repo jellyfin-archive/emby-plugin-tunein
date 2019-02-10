@@ -112,7 +112,7 @@ namespace Jellyfin.Plugins.TuneIn
         {
             var page = new HtmlDocument();
             var items = new List<ChannelItemInfo>();
-            var url = "http://opml.radiotime.com/Browse.ashx?c=presets&formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
+            var url = "https://opml.radiotime.com/Browse.ashx?c=presets&formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
                       _appHost.SystemId;
 
             if (Plugin.Instance.Configuration.Username != null)
@@ -174,7 +174,7 @@ namespace Jellyfin.Plugins.TuneIn
         {
             var page = new HtmlDocument();
             var items = new List<ChannelItemInfo>();
-            var url = "http://opml.radiotime.com/Browse.ashx?formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
+            var url = "https://opml.radiotime.com/Browse.ashx?formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
                       _appHost.SystemId;
 
             if (Plugin.Instance.Configuration.LatLon != null)
@@ -490,7 +490,7 @@ namespace Jellyfin.Plugins.TuneIn
 
         public string HomePageUrl
         {
-            get { return "http://www.tunein.com/"; }
+            get { return "https://www.tunein.com/"; }
         }
 
         public ChannelParentalRating ParentalRating
@@ -506,21 +506,21 @@ namespace Jellyfin.Plugins.TuneIn
         public String GetDefaultImages(String name)
         {
             if (name == "Local Radio")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-localradio.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-localradio.png";
             if (name == "By Language")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylanguage.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylanguage.png";
             if (name == "By Location")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylocation.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylocation.png";
             if (name == "Music")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-music.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-music.png";
             if (name == "My Favorites")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-myfavs.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-myfavs.png";
             if (name == "Podcasts")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-podcasts.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-podcasts.png";
             if (name == "Sports")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-sports.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-sports.png";
             if (name == "Talk")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-talk.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-talk.png";
 
             return "";
         }
