@@ -2,7 +2,7 @@
 using System.Collections;
 using System.IO;
 
-namespace MediaBrowser.Plugins.TuneIn
+namespace Jellyfin.Plugins.TuneIn
 {
     internal class IniParser
     {

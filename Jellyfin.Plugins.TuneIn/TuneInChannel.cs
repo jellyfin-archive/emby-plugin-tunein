@@ -363,7 +363,7 @@ namespace Jellyfin.Plugins.TuneIn
                                         {
                                             using (var value = response.Content)
                                             {
-                                                var parser = new MediaBrowser.Plugins.TuneIn.IniParser(value);
+                                                var parser = new IniParser(value);
                                                 var count = Convert.ToInt16(parser.GetSetting("playlist", "NumberOfEntries"));
                                                 _logger.LogDebug("COUNT : " + count);
                                                 for (var i = 0; i < count; i++)
