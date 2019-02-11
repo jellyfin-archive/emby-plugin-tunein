@@ -64,41 +64,55 @@ namespace Jellyfin.Plugins.TuneIn
 
             _logger.LogDebug("Category ID " + query.FolderId);
 
-            if (string.IsNullOrWhiteSpace(query.FolderId))
-            {
-                items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
-
-                if (Plugin.Instance.Configuration.Username != null)
+            try {
+                if (string.IsNullOrWhiteSpace(query.FolderId))
                 {
-                    items.Add(new ChannelItemInfo
+                    items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
+
+                    if (!string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.Username))
                     {
-                        Name = "My Favorites",
-                        Id = "preset_",
-                        Type = ChannelItemType.Folder,
-                        ImageUrl = GetDefaultImages("My Favorites")
-                    });
-                }
-            }
-            else
-            {
-                var channelID = query.FolderId.Split('_');
-
-
-                if (channelID[0] == "preset")
-                {
-                    items = await GetPresets(query, cancellationToken);
+                        items.Add(new ChannelItemInfo
+                        {
+                            Name = "My Favorites",
+                            Id = "preset_",
+                            Type = ChannelItemType.Folder,
+                            ImageUrl = GetDefaultImages("My Favorites")
+                        });
+                    }
                 }
                 else
                 {
-                    query.FolderId = channelID[1].Replace("&amp;", "&");
+                    var channelID = query.FolderId.Split('_');
 
-                    if (channelID.Count() > 2)
+
+                    if (channelID[0] == "preset")
                     {
-                        items = await GetMenu(channelID[2], query, cancellationToken).ConfigureAwait(false);
+                        items = await GetPresets(query, cancellationToken);
                     }
                     else
-                        items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
+                    {
+                        query.FolderId = channelID[1].Replace("&amp;", "&");
+
+                        if (channelID.Count() > 2)
+                        {
+                            items = await GetMenu(channelID[2], query, cancellationToken).ConfigureAwait(false);
+                        }
+                        else
+                            items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Could not load channel items for TuneIn due to fatal error!");
+                _logger.LogError(ex.ToString());
+                items.Add(new ChannelItemInfo
+                {
+                    Name = "Fatal Error!",
+                    Id = "",
+                    Type = ChannelItemType.Folder,
+                    ImageUrl = GetDefaultImages("Fatal Error!")
+                });
             }
 
             return new ChannelItemResult()
