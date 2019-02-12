@@ -28,7 +28,7 @@ namespace Jellyfin.Plugins.TuneIn
         private readonly ILogger _logger;
         private readonly IApplicationHost _appHost;
 
-        private String partnerid { get; set; }
+        // private String partnerid { get; set; }
 
         public TuneInChannel(IHttpClient httpClient, ILoggerFactory loggerFactory, IApplicationHost appHost)
         {
@@ -36,7 +36,7 @@ namespace Jellyfin.Plugins.TuneIn
             _appHost = appHost;
             _logger = loggerFactory.CreateLogger(GetType().Name);
 
-            partnerid = "uD1X52pA";
+            // partnerid = "uD1X52pA";
         }
 
         public string DataVersion
@@ -64,41 +64,55 @@ namespace Jellyfin.Plugins.TuneIn
 
             _logger.LogDebug("Category ID " + query.FolderId);
 
-            if (string.IsNullOrWhiteSpace(query.FolderId))
-            {
-                items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
-
-                if (Plugin.Instance.Configuration.Username != null)
+            try {
+                if (string.IsNullOrWhiteSpace(query.FolderId))
                 {
-                    items.Add(new ChannelItemInfo
+                    items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
+
+                    if (!string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.Username))
                     {
-                        Name = "My Favorites",
-                        Id = "preset_",
-                        Type = ChannelItemType.Folder,
-                        ImageUrl = GetDefaultImages("My Favorites")
-                    });
-                }
-            }
-            else
-            {
-                var channelID = query.FolderId.Split('_');
-
-
-                if (channelID[0] == "preset")
-                {
-                    items = await GetPresets(query, cancellationToken);
+                        items.Add(new ChannelItemInfo
+                        {
+                            Name = "My Favorites",
+                            Id = "preset_",
+                            Type = ChannelItemType.Folder,
+                            ImageUrl = GetDefaultImages("My Favorites")
+                        });
+                    }
                 }
                 else
                 {
-                    query.FolderId = channelID[1].Replace("&amp;", "&");
+                    var channelID = query.FolderId.Split('_');
 
-                    if (channelID.Count() > 2)
+
+                    if (channelID[0] == "preset")
                     {
-                        items = await GetMenu(channelID[2], query, cancellationToken).ConfigureAwait(false);
+                        items = await GetPresets(query, cancellationToken);
                     }
                     else
-                        items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
+                    {
+                        query.FolderId = channelID[1].Replace("&amp;", "&");
+
+                        if (channelID.Count() > 2)
+                        {
+                            items = await GetMenu(channelID[2], query, cancellationToken).ConfigureAwait(false);
+                        }
+                        else
+                            items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Could not load channel items for TuneIn due to fatal error!");
+                _logger.LogError(ex.ToString());
+                items.Add(new ChannelItemInfo
+                {
+                    Name = "Fatal Error!",
+                    Id = "",
+                    Type = ChannelItemType.Folder,
+                    ImageUrl = GetDefaultImages("Fatal Error!")
+                });
             }
 
             return new ChannelItemResult()
@@ -112,8 +126,8 @@ namespace Jellyfin.Plugins.TuneIn
         {
             var page = new HtmlDocument();
             var items = new List<ChannelItemInfo>();
-            var url = "http://opml.radiotime.com/Browse.ashx?c=presets&formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
-                      _appHost.SystemId;
+            // "&partnerid=" + partnerid + ""
+            var url = "https://opml.radiotime.com/Browse.ashx?c=presets&formats=mp3,aac&serial=" + _appHost.SystemId;
 
             if (Plugin.Instance.Configuration.Username != null)
             {
@@ -174,8 +188,8 @@ namespace Jellyfin.Plugins.TuneIn
         {
             var page = new HtmlDocument();
             var items = new List<ChannelItemInfo>();
-            var url = "http://opml.radiotime.com/Browse.ashx?formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
-                      _appHost.SystemId;
+            // "&partnerid=" + partnerid + ""
+            var url = "https://opml.radiotime.com/Browse.ashx?formats=mp3,aac&serial=" + _appHost.SystemId;
 
             if (Plugin.Instance.Configuration.LatLon != null)
             {
@@ -197,65 +211,34 @@ namespace Jellyfin.Plugins.TuneIn
                     if (page.DocumentNode != null)
                     {
                         var body = page.DocumentNode.SelectSingleNode("//body");
+                        var subbody = title != "" ? body.SelectSingleNode("./outline[@text=\"" + title + "\"]") : null;
+                        if (subbody != null) body = subbody;
 
-                        if (body.SelectNodes("./outline[@url and not(@type=\"audio\")]") != null)
+                        List<HtmlNode> files = new List<HtmlNode>();
+                        List<HtmlNode> folders = new List<HtmlNode>();
+                        
+                        var audio = body.SelectNodes("./outline[@type=\"audio\" and @url]");
+                        if (audio != null)
                         {
-                            _logger.LogDebug("Num 1");
-
-                            if (body.SelectNodes("./outline[@text=\"Stations\"]/outline") != null)
-                            {
-                                foreach (var node in body.SelectNodes("./outline[@text=\"Stations\"]/outline"))
-                                {
-                                    items.Add(new ChannelItemInfo
-                                    {
-                                        Name = node.Attributes["text"].Value,
-                                        Id = "stream_" + node.Attributes["url"].Value,
-                                        ImageUrl = node.Attributes["image"] != null ? node.Attributes["image"].Value : "",
-                                        Type = ChannelItemType.Media,
-                                        ContentType = ChannelMediaContentType.Podcast,
-                                        MediaType = ChannelMediaType.Audio
-
-                                    });
-                                }
-                            }
-
-                            foreach (var node in body.SelectNodes("./outline[@url]"))
-                            {
-                                items.Add(new ChannelItemInfo
-                                {
-                                    Name = node.Attributes["text"].Value,
-                                    Id = "subcat_" + node.Attributes["url"].Value,
-                                    Type = ChannelItemType.Folder,
-                                    ImageUrl = GetDefaultImages(node.Attributes["text"].Value)
-                                });
-                            }
+                            _logger.LogDebug("TuneIn found root audio items...");
+                            files.AddRange(audio);
                         }
-                        else if (body.SelectNodes("./outline[@url and @type=\"audio\"]") != null)
+
+                        var links = body.SelectNodes("./outline[@type=\"link\" and @url]");
+                        if (links != null)
                         {
-                            _logger.LogDebug("Num 2");
-                            foreach (var node in body.SelectNodes("./outline[@url]"))
-                            {
-                                items.Add(new ChannelItemInfo
-                                {
-                                    Name = node.Attributes["text"].Value,
-                                    Id = "stream_" + node.Attributes["url"].Value,
-                                    Type = ChannelItemType.Media,
-                                    ContentType = ChannelMediaContentType.Podcast,
-                                    ImageUrl = node.Attributes["image"].Value,
-                                    MediaType = ChannelMediaType.Audio
-                                });
-                            }
+                            _logger.LogDebug("TuneIn found root links...");
+                            folders.AddRange(links);
                         }
-                        else if (body.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]") != null && title == "")
+
+                        var subcategories = body.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]");
+                        if (subcategories != null)
                         {
-                            _logger.LogDebug("Num 3");
-                            foreach (
-                                var node in body.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]"))
+                            _logger.LogDebug("TuneIn found sub-categories...");
+                            foreach (var node in subcategories)
                             {
                                 if (node.Attributes["text"].Value == "No stations or shows available")
-                                {
                                     throw new Exception("No stations or shows available");
-                                }
 
                                 items.Add(new ChannelItemInfo
                                 {
@@ -265,41 +248,57 @@ namespace Jellyfin.Plugins.TuneIn
                                 });
                             }
                         }
-                        else if (title != "")
+
+                        if (items.Count == 1 && items.First().Name == "Stations" && files.Count == 0 && folders.Count == 0)
                         {
-                            _logger.LogDebug("Num 4");
-                            foreach (var node in body.SelectNodes(String.Format("./outline[@text=\"{0}\"]/outline", title)))
+                            // Special case to automatically expand a lone Stations subcategory
+                            items.Clear();
+
+                            var stations = body.SelectNodes("./outline[@text=\"Stations\"]/outline[@type=\"audio\" and @url]");
+                            if (stations != null)
                             {
-                                var type = node.Attributes["type"].Value;
-                                _logger.LogDebug("Type : " + type);
-                                if (type == "audio")
-                                {
-                                    items.Add(new ChannelItemInfo
-                                    {
-                                        Name = node.Attributes["text"].Value,
-                                        Id = "stream_" + node.Attributes["url"].Value,
-                                        Type = ChannelItemType.Media,
-                                        ContentType = ChannelMediaContentType.Podcast,
-                                        ImageUrl = node.Attributes["image"].Value,
-                                        MediaType = ChannelMediaType.Audio,
+                                _logger.LogDebug("TuneIn found inline audio items (stations)...");
+                                files.AddRange(stations);
+                            }
 
-                                    });
-                                }
-                                else
-                                {
-                                    var imageNode = node.Attributes["image"];
-
-                                    items.Add(new ChannelItemInfo
-                                    {
-                                        Name = node.Attributes["text"].Value,
-                                        Id = "subcat_" + node.Attributes["url"].Value,
-                                        ImageUrl = imageNode != null ? imageNode.Value : "",
-                                        Type = ChannelItemType.Folder,
-                                    });
-                                }
+                            var stationlinks = body.SelectNodes("./outline[@text=\"Stations\"]/outline[@type=\"link\" and @url]");
+                            if (stationlinks != null)
+                            {
+                                _logger.LogDebug("TuneIn found inline links (stations)...");
+                                folders.AddRange(stationlinks);
                             }
                         }
 
+                        if (files != null)
+                        {
+                            foreach (var node in files)
+                            {
+                                items.Add(new ChannelItemInfo
+                                {
+                                    Name = node.Attributes["text"].Value,
+                                    Id = "stream_" + node.Attributes["url"].Value,
+                                    Type = ChannelItemType.Media,
+                                    ContentType = ChannelMediaContentType.Podcast,
+                                    MediaType = ChannelMediaType.Audio,
+                                    ImageUrl = node.Attributes["image"] != null ? node.Attributes["image"].Value : GetDefaultImages(node.Attributes["text"].Value)
+                                });
+                            }
+                        }
+                        
+                        if (folders != null)
+                        {
+                            foreach (var node in folders)
+                            {
+                                items.Add(new ChannelItemInfo
+                                {
+                                    Name = node.Attributes["text"].Value,
+                                    Id = "category_" + node.Attributes["url"].Value,
+                                    Type = ChannelItemType.Folder,
+                                    ImageUrl = node.Attributes["image"] != null ? node.Attributes["image"].Value : GetDefaultImages(node.Attributes["text"].Value)
+                                });
+                            }
+                        }
+                        
                     }
                 }
             }
@@ -316,7 +315,7 @@ namespace Jellyfin.Plugins.TuneIn
 
             using (var outerResponse = await _httpClient.SendAsync(new HttpRequestOptions
             {
-                Url = channelID[1] + "&formats=mp3,aac",
+                Url = channelID[1].Replace("&amp;", "&"),
                 CancellationToken = CancellationToken.None
 
             }, "GET").ConfigureAwait(false))
@@ -349,7 +348,7 @@ namespace Jellyfin.Plugins.TuneIn
                                         {
                                             using (var value = response.Content)
                                             {
-                                                var parser = new MediaBrowser.Plugins.TuneIn.IniParser(value);
+                                                var parser = new IniParser(value);
                                                 var count = Convert.ToInt16(parser.GetSetting("playlist", "NumberOfEntries"));
                                                 _logger.LogDebug("COUNT : " + count);
                                                 for (var i = 0; i < count; i++)
@@ -359,7 +358,7 @@ namespace Jellyfin.Plugins.TuneIn
 
                                                     items.Add(new ChannelMediaInfo
                                                     {
-                                                        Path = file.ToLower()
+                                                        Path = file
                                                     }.ToMediaSource());
                                                 }
                                             }
@@ -490,7 +489,7 @@ namespace Jellyfin.Plugins.TuneIn
 
         public string HomePageUrl
         {
-            get { return "http://www.tunein.com/"; }
+            get { return "https://www.tunein.com/"; }
         }
 
         public ChannelParentalRating ParentalRating
@@ -506,21 +505,21 @@ namespace Jellyfin.Plugins.TuneIn
         public String GetDefaultImages(String name)
         {
             if (name == "Local Radio")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-localradio.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-localradio.png";
             if (name == "By Language")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylanguage.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylanguage.png";
             if (name == "By Location")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylocation.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylocation.png";
             if (name == "Music")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-music.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-music.png";
             if (name == "My Favorites")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-myfavs.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-myfavs.png";
             if (name == "Podcasts")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-podcasts.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-podcasts.png";
             if (name == "Sports")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-sports.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-sports.png";
             if (name == "Talk")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-talk.png";
+                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-talk.png";
 
             return "";
         }

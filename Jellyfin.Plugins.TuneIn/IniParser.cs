@@ -2,7 +2,7 @@
 using System.Collections;
 using System.IO;
 
-namespace MediaBrowser.Plugins.TuneIn
+namespace Jellyfin.Plugins.TuneIn
 {
     internal class IniParser
     {
@@ -35,13 +35,13 @@ namespace MediaBrowser.Plugins.TuneIn
 
                 while (strLine != null)
                 {
-                    strLine = strLine.Trim().ToUpper();
+                    strLine = strLine.Trim();
 
                     if (strLine != "")
                     {
                         if (strLine.StartsWith("[") && strLine.EndsWith("]"))
                         {
-                            currentRoot = strLine.Substring(1, strLine.Length - 2);
+                            currentRoot = strLine.Substring(1, strLine.Length - 2).ToUpper();
                         }
                         else
                         {
@@ -54,11 +54,13 @@ namespace MediaBrowser.Plugins.TuneIn
                                 currentRoot = "ROOT";
 
                             sectionPair.Section = currentRoot;
-                            sectionPair.Key = keyPair[0];
+                            sectionPair.Key = keyPair[0].ToUpper();
 
                             if (keyPair.Length > 1)
                                 value = keyPair[1];
-
+                            
+                            if (keyPairs.ContainsKey(sectionPair))
+                                keyPairs.Remove(sectionPair);
                             keyPairs.Add(sectionPair, value);
                         }
                     }
