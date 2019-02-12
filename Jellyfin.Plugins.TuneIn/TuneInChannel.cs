@@ -211,65 +211,34 @@ namespace Jellyfin.Plugins.TuneIn
                     if (page.DocumentNode != null)
                     {
                         var body = page.DocumentNode.SelectSingleNode("//body");
+                        var subbody = title != "" ? body.SelectSingleNode("./outline[@text=\"" + title + "\"]") : null;
+                        if (subbody != null) body = subbody;
 
-                        if (body.SelectNodes("./outline[@url and not(@type=\"audio\")]") != null)
+                        List<HtmlNode> files = new List<HtmlNode>();
+                        List<HtmlNode> folders = new List<HtmlNode>();
+                        
+                        var audio = body.SelectNodes("./outline[@type=\"audio\" and @url]");
+                        if (audio != null)
                         {
-                            _logger.LogDebug("Num 1");
-
-                            if (body.SelectNodes("./outline[@text=\"Stations\"]/outline") != null)
-                            {
-                                foreach (var node in body.SelectNodes("./outline[@text=\"Stations\"]/outline"))
-                                {
-                                    items.Add(new ChannelItemInfo
-                                    {
-                                        Name = node.Attributes["text"].Value,
-                                        Id = "stream_" + node.Attributes["url"].Value,
-                                        ImageUrl = node.Attributes["image"] != null ? node.Attributes["image"].Value : "",
-                                        Type = ChannelItemType.Media,
-                                        ContentType = ChannelMediaContentType.Podcast,
-                                        MediaType = ChannelMediaType.Audio
-
-                                    });
-                                }
-                            }
-
-                            foreach (var node in body.SelectNodes("./outline[@url]"))
-                            {
-                                items.Add(new ChannelItemInfo
-                                {
-                                    Name = node.Attributes["text"].Value,
-                                    Id = "subcat_" + node.Attributes["url"].Value,
-                                    Type = ChannelItemType.Folder,
-                                    ImageUrl = GetDefaultImages(node.Attributes["text"].Value)
-                                });
-                            }
+                            _logger.LogDebug("TuneIn found root audio items...");
+                            files.AddRange(audio);
                         }
-                        else if (body.SelectNodes("./outline[@url and @type=\"audio\"]") != null)
+
+                        var links = body.SelectNodes("./outline[@type=\"link\" and @url]");
+                        if (links != null)
                         {
-                            _logger.LogDebug("Num 2");
-                            foreach (var node in body.SelectNodes("./outline[@url]"))
-                            {
-                                items.Add(new ChannelItemInfo
-                                {
-                                    Name = node.Attributes["text"].Value,
-                                    Id = "stream_" + node.Attributes["url"].Value,
-                                    Type = ChannelItemType.Media,
-                                    ContentType = ChannelMediaContentType.Podcast,
-                                    ImageUrl = node.Attributes["image"].Value,
-                                    MediaType = ChannelMediaType.Audio
-                                });
-                            }
+                            _logger.LogDebug("TuneIn found root links...");
+                            folders.AddRange(links);
                         }
-                        else if (body.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]") != null && title == "")
+
+                        var subcategories = body.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]");
+                        if (subcategories != null)
                         {
-                            _logger.LogDebug("Num 3");
-                            foreach (
-                                var node in body.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]"))
+                            _logger.LogDebug("TuneIn found sub-categories...");
+                            foreach (var node in subcategories)
                             {
                                 if (node.Attributes["text"].Value == "No stations or shows available")
-                                {
                                     throw new Exception("No stations or shows available");
-                                }
 
                                 items.Add(new ChannelItemInfo
                                 {
@@ -279,41 +248,57 @@ namespace Jellyfin.Plugins.TuneIn
                                 });
                             }
                         }
-                        else if (title != "")
+
+                        if (items.Count == 1 && items.First().Name == "Stations" && files.Count == 0 && folders.Count == 0)
                         {
-                            _logger.LogDebug("Num 4");
-                            foreach (var node in body.SelectNodes(String.Format("./outline[@text=\"{0}\"]/outline", title)))
+                            // Special case to automatically expand a lone Stations subcategory
+                            items.Clear();
+
+                            var stations = body.SelectNodes("./outline[@text=\"Stations\"]/outline[@type=\"audio\" and @url]");
+                            if (stations != null)
                             {
-                                var type = node.Attributes["type"].Value;
-                                _logger.LogDebug("Type : " + type);
-                                if (type == "audio")
-                                {
-                                    items.Add(new ChannelItemInfo
-                                    {
-                                        Name = node.Attributes["text"].Value,
-                                        Id = "stream_" + node.Attributes["url"].Value,
-                                        Type = ChannelItemType.Media,
-                                        ContentType = ChannelMediaContentType.Podcast,
-                                        ImageUrl = node.Attributes["image"].Value,
-                                        MediaType = ChannelMediaType.Audio,
+                                _logger.LogDebug("TuneIn found inline audio items (stations)...");
+                                files.AddRange(stations);
+                            }
 
-                                    });
-                                }
-                                else
-                                {
-                                    var imageNode = node.Attributes["image"];
-
-                                    items.Add(new ChannelItemInfo
-                                    {
-                                        Name = node.Attributes["text"].Value,
-                                        Id = "subcat_" + node.Attributes["url"].Value,
-                                        ImageUrl = imageNode != null ? imageNode.Value : "",
-                                        Type = ChannelItemType.Folder,
-                                    });
-                                }
+                            var stationlinks = body.SelectNodes("./outline[@text=\"Stations\"]/outline[@type=\"link\" and @url]");
+                            if (stationlinks != null)
+                            {
+                                _logger.LogDebug("TuneIn found inline links (stations)...");
+                                folders.AddRange(stationlinks);
                             }
                         }
 
+                        if (files != null)
+                        {
+                            foreach (var node in files)
+                            {
+                                items.Add(new ChannelItemInfo
+                                {
+                                    Name = node.Attributes["text"].Value,
+                                    Id = "stream_" + node.Attributes["url"].Value,
+                                    Type = ChannelItemType.Media,
+                                    ContentType = ChannelMediaContentType.Podcast,
+                                    MediaType = ChannelMediaType.Audio,
+                                    ImageUrl = node.Attributes["image"] != null ? node.Attributes["image"].Value : GetDefaultImages(node.Attributes["text"].Value)
+                                });
+                            }
+                        }
+                        
+                        if (folders != null)
+                        {
+                            foreach (var node in folders)
+                            {
+                                items.Add(new ChannelItemInfo
+                                {
+                                    Name = node.Attributes["text"].Value,
+                                    Id = "category_" + node.Attributes["url"].Value,
+                                    Type = ChannelItemType.Folder,
+                                    ImageUrl = node.Attributes["image"] != null ? node.Attributes["image"].Value : GetDefaultImages(node.Attributes["text"].Value)
+                                });
+                            }
+                        }
+                        
                     }
                 }
             }
