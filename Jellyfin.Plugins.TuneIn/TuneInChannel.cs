@@ -330,7 +330,7 @@ namespace Jellyfin.Plugins.TuneIn
 
             using (var outerResponse = await _httpClient.SendAsync(new HttpRequestOptions
             {
-                Url = channelID[1] + "&formats=mp3,aac",
+                Url = channelID[1].Replace("&amp;", "&"),
                 CancellationToken = CancellationToken.None
 
             }, "GET").ConfigureAwait(false))
