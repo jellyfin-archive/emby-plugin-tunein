@@ -373,7 +373,7 @@ namespace Jellyfin.Plugins.TuneIn
 
                                                     items.Add(new ChannelMediaInfo
                                                     {
-                                                        Path = file.ToLower()
+                                                        Path = file
                                                     }.ToMediaSource());
                                                 }
                                             }
