@@ -58,7 +58,9 @@ namespace Jellyfin.Plugins.TuneIn
 
                             if (keyPair.Length > 1)
                                 value = keyPair[1];
-
+                            
+                            if (keyPairs.ContainsKey(sectionPair))
+                                keyPairs.Remove(sectionPair);
                             keyPairs.Add(sectionPair, value);
                         }
                     }
