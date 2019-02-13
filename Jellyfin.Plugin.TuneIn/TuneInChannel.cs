@@ -351,15 +351,19 @@ namespace Jellyfin.Plugin.TuneIn
                                                 var parser = new IniParser(value);
                                                 var count = Convert.ToInt16(parser.GetSetting("playlist", "NumberOfEntries"));
                                                 _logger.LogDebug("COUNT : " + count);
-                                                for (var i = 0; i < count; i++)
+                                                var end = count+1;
+                                                for (var i = 1; i < end; i++)
                                                 {
-                                                    var file = parser.GetSetting("playlist", "File" + count);
-                                                    _logger.LogDebug("FILE : " + count + " - " + file);
+                                                    var file = parser.GetSetting("playlist", "File" + i);
 
-                                                    items.Add(new ChannelMediaInfo
+                                                    if (!String.IsNullOrWhiteSpace(file))
                                                     {
-                                                        Path = file
-                                                    }.ToMediaSource());
+                                                        _logger.LogDebug("FILE : " + i + " - " + file);
+                                                        items.Add(new ChannelMediaInfo
+                                                        {
+                                                            Path = file
+                                                        }.ToMediaSource());
+                                                    }
                                                 }
                                             }
                                         }
@@ -387,10 +391,13 @@ namespace Jellyfin.Plugin.TuneIn
                                                     while (!reader2.EndOfStream)
                                                     {
                                                         var url2 = reader2.ReadLine();
-                                                        items.Add(new ChannelMediaInfo
+                                                        if (!String.IsNullOrWhiteSpace(url2))
                                                         {
-                                                            Path = url2
-                                                        }.ToMediaSource());
+                                                            items.Add(new ChannelMediaInfo
+                                                            {
+                                                                Path = url2
+                                                            }.ToMediaSource());
+                                                        }
                                                     }
                                                 }
                                             }
