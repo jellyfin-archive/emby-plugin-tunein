@@ -386,7 +386,7 @@ namespace Jellyfin.Plugin.TuneIn
                                                     while (!reader2.EndOfStream)
                                                     {
                                                         var url2 = reader2.ReadLine();
-                                                        if (!String.IsNullOrWhiteSpace(url2))
+                                                        if (!String.IsNullOrWhiteSpace(url2) && !url2.StartsWith("#"))
                                                             items.Add(GetMediaInfoFromUrl(url2));
                                                     }
                                                 }
