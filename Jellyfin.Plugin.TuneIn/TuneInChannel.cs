@@ -330,13 +330,14 @@ namespace Jellyfin.Plugin.TuneIn
                             _logger.LogDebug("FILE NAME : " + url.Split('/').Last().Split('?').First());
 
                             var ext = Path.GetExtension(url.Split('/').Last().Split('?').First());
-
+                            
                             _logger.LogDebug("URL : " + url);
                             if (!string.IsNullOrEmpty(ext))
                             {
                                 _logger.LogDebug("Extension : " + ext);
                                 if (ext == ".pls")
                                 {
+                                    _logger.LogDebug("TuneIn MediaInfo request: .pls file: " + url);
                                     try
                                     {
                                         using (var response = await _httpClient.SendAsync(new HttpRequestOptions
@@ -350,20 +351,13 @@ namespace Jellyfin.Plugin.TuneIn
                                             {
                                                 var parser = new IniParser(value);
                                                 var count = Convert.ToInt16(parser.GetSetting("playlist", "NumberOfEntries"));
-                                                _logger.LogDebug("COUNT : " + count);
                                                 var end = count+1;
                                                 for (var i = 1; i < end; i++)
                                                 {
                                                     var file = parser.GetSetting("playlist", "File" + i);
 
                                                     if (!String.IsNullOrWhiteSpace(file))
-                                                    {
-                                                        _logger.LogDebug("FILE : " + i + " - " + file);
-                                                        items.Add(new ChannelMediaInfo
-                                                        {
-                                                            Path = file
-                                                        }.ToMediaSource());
-                                                    }
+                                                        items.Add(GetMediaInfoFromUrl(file));
                                                 }
                                             }
                                         }
@@ -375,6 +369,7 @@ namespace Jellyfin.Plugin.TuneIn
                                 }
                                 else if (ext == ".m3u")
                                 {
+                                    _logger.LogDebug("TuneIn MediaInfo request: .m3u file: " + url);
                                     try
                                     {
                                         using (var response = await _httpClient.SendAsync(new HttpRequestOptions
@@ -392,12 +387,7 @@ namespace Jellyfin.Plugin.TuneIn
                                                     {
                                                         var url2 = reader2.ReadLine();
                                                         if (!String.IsNullOrWhiteSpace(url2))
-                                                        {
-                                                            items.Add(new ChannelMediaInfo
-                                                            {
-                                                                Path = url2
-                                                            }.ToMediaSource());
-                                                        }
+                                                            items.Add(GetMediaInfoFromUrl(url2));
                                                     }
                                                 }
                                             }
@@ -410,12 +400,13 @@ namespace Jellyfin.Plugin.TuneIn
                                 }
                                 else
                                 {
+                                    _logger.LogDebug("TuneIn MediaInfo request: Non-playlist file (" + ext + "): " + url);
                                     items.Add(GetMediaInfoFromUrl(url));
                                 }
                             }
                             else
                             {
-                                _logger.LogDebug("Normal URL");
+                                _logger.LogDebug("TuneIn MediaInfo request: No file extension: " + url);
 
                                 items.Add(GetMediaInfoFromUrl(url));
                             }
@@ -429,8 +420,35 @@ namespace Jellyfin.Plugin.TuneIn
 
         private MediaSourceInfo GetMediaInfoFromUrl(string url)
         {
-            var container = url.EndsWith("aac", StringComparison.OrdinalIgnoreCase) ? "aac" : "mp3";
+            var urlLower = url.ToLowerInvariant();
+            var ext = Path.GetExtension(urlLower.Split('/').Last().Split('?').First());
 
+            var container = "";
+
+            if (ext != null)
+            {
+                if (ext == ".aac") container = "aac";
+                if (ext == ".mp3") container = "mp3";
+            }
+            else
+            {
+                var pathElements = urlLower.Split('/');
+                var pathEnd = pathElements.Last().Split('?').First();
+                if (String.IsNullOrWhiteSpace(pathEnd)) pathEnd = pathElements[pathElements.Count()-2];
+
+                if (pathEnd.Contains("aac")) container = "aac";
+                if (pathEnd.Contains("mp3")) container = "mp3";
+
+                if (String.IsNullOrWhiteSpace(container))
+                {
+                    if (urlLower.Contains("aac")) container = "aac";
+                    if (urlLower.Contains("mp3")) container = "mp3";
+                }
+            }
+
+            if (String.IsNullOrWhiteSpace(container))
+                container = "aac";
+            
             return new ChannelMediaInfo
             {
                 Path = url,
