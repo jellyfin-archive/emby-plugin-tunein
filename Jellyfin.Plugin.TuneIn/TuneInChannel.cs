@@ -367,7 +367,7 @@ namespace Jellyfin.Plugin.TuneIn
                                         _logger.LogError(ex.ToString());
                                     }
                                 }
-                                else if (ext == ".m3u")
+                                else if (ext == ".m3u" || ext == ".m3u8")
                                 {
                                     _logger.LogDebug("TuneIn MediaInfo request: .m3u file: " + url);
                                     try
@@ -428,7 +428,9 @@ namespace Jellyfin.Plugin.TuneIn
             if (ext != null)
             {
                 if (ext == ".aac") container = "aac";
-                if (ext == ".mp3") container = "mp3";
+                else if (ext == ".mp3") container = "mp3";
+                else if (ext == ".pls" || ext == ".m3u" || ext == ".m3u8")
+                    container = "playlist";
             }
             else
             {
@@ -437,27 +439,37 @@ namespace Jellyfin.Plugin.TuneIn
                 if (String.IsNullOrWhiteSpace(pathEnd)) pathEnd = pathElements[pathElements.Count()-2];
 
                 if (pathEnd.Contains("aac")) container = "aac";
-                if (pathEnd.Contains("mp3")) container = "mp3";
+                else if (pathEnd.Contains("mp3")) container = "mp3";
 
                 if (String.IsNullOrWhiteSpace(container))
                 {
                     if (urlLower.Contains("aac")) container = "aac";
-                    if (urlLower.Contains("mp3")) container = "mp3";
+                    else if (urlLower.Contains("mp3")) container = "mp3";
                 }
             }
 
             if (String.IsNullOrWhiteSpace(container))
                 container = "aac";
             
-            return new ChannelMediaInfo
+            if (container == "playlist")
             {
-                Path = url,
-                Container = container,
-                AudioCodec = container,
-                AudioBitrate = 128000,
-                AudioChannels = 2,
-                SupportsDirectPlay = true
-            }.ToMediaSource();
+                return new ChannelMediaInfo
+                {
+                    Path = url
+                }.ToMediaSource();
+            }
+            else
+            {
+                return new ChannelMediaInfo
+                {
+                    Path = url,
+                    Container = container,
+                    AudioCodec = container,
+                    AudioBitrate = 128000,
+                    AudioChannels = 2,
+                    SupportsDirectPlay = true
+                }.ToMediaSource();
+            }
         }
 
         public Task<DynamicImageResponse> GetChannelImage(ImageType type, CancellationToken cancellationToken)
