@@ -217,7 +217,7 @@ namespace Jellyfin.Plugin.TuneIn
 
                         // Special case to expand a lone Stations subcategory
                         var outlines = rootNode.SelectNodes("./outline");
-                        if (outlines.Count == 1 && outlines.First().Name == "Stations")
+                        if (outlines.Count == 1 && outlines.First().GetAttributeValue("text", "none") == "Stations")
                             rootNode = outlines.First();
 
                         List<HtmlNode> files = new List<HtmlNode>();
