@@ -210,28 +210,34 @@ namespace Jellyfin.Plugin.TuneIn
                     page.Load(site, Encoding.UTF8);
                     if (page.DocumentNode != null)
                     {
-                        var body = page.DocumentNode.SelectSingleNode("//body");
-                        var subbody = title != "" ? body.SelectSingleNode("./outline[@text=\"" + title + "\"]") : null;
-                        if (subbody != null) body = subbody;
+                        var rootNode = page.DocumentNode.SelectSingleNode("//body");
+
+                        var subNode = !String.IsNullOrEmpty(title) ? rootNode.SelectSingleNode("./outline[@text=\"" + title + "\"]") : null;
+                        if (subNode != null) rootNode = subNode;
+
+                        // Special case to expand a lone Stations subcategory
+                        var outlines = rootNode.SelectNodes("./outline");
+                        if (outlines.Count == 1 && outlines.First().Name == "Stations")
+                            rootNode = outlines.First();
 
                         List<HtmlNode> files = new List<HtmlNode>();
                         List<HtmlNode> folders = new List<HtmlNode>();
-                        
-                        var audio = body.SelectNodes("./outline[@type=\"audio\" and @url]");
+
+                        var audio = rootNode.SelectNodes("./outline[@type=\"audio\" and @url]");
                         if (audio != null)
                         {
-                            _logger.LogDebug("TuneIn found root audio items...");
+                            _logger.LogDebug("TuneIn found audio items...");
                             files.AddRange(audio);
                         }
 
-                        var links = body.SelectNodes("./outline[@type=\"link\" and @url]");
+                        var links = rootNode.SelectNodes("./outline[@type=\"link\" and @url]");
                         if (links != null)
                         {
-                            _logger.LogDebug("TuneIn found root links...");
+                            _logger.LogDebug("TuneIn found links...");
                             folders.AddRange(links);
                         }
 
-                        var subcategories = body.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]");
+                        var subcategories = rootNode.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]");
                         if (subcategories != null)
                         {
                             _logger.LogDebug("TuneIn found sub-categories...");
@@ -246,26 +252,6 @@ namespace Jellyfin.Plugin.TuneIn
                                     Id = "subcat_" + query.FolderId + "_" + node.Attributes["text"].Value,
                                     Type = ChannelItemType.Folder,
                                 });
-                            }
-                        }
-
-                        if (items.Count == 1 && items.First().Name == "Stations" && files.Count == 0 && folders.Count == 0)
-                        {
-                            // Special case to automatically expand a lone Stations subcategory
-                            items.Clear();
-
-                            var stations = body.SelectNodes("./outline[@text=\"Stations\"]/outline[@type=\"audio\" and @url]");
-                            if (stations != null)
-                            {
-                                _logger.LogDebug("TuneIn found inline audio items (stations)...");
-                                files.AddRange(stations);
-                            }
-
-                            var stationlinks = body.SelectNodes("./outline[@text=\"Stations\"]/outline[@type=\"link\" and @url]");
-                            if (stationlinks != null)
-                            {
-                                _logger.LogDebug("TuneIn found inline links (stations)...");
-                                folders.AddRange(stationlinks);
                             }
                         }
 
