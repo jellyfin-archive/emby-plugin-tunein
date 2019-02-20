@@ -32,7 +32,7 @@ namespace Jellyfin.Plugin.TuneIn
             };
         }
 
-        private Guid _id = new Guid("10b82431-f939-4507-a8e2-9509dd3fd6ae");
+        private Guid _id = new Guid("74df8a55-7332-4d3e-9c45-6f225b06fcf7");
         public override Guid Id
         {
             get { return _id; }
@@ -51,7 +51,7 @@ namespace Jellyfin.Plugin.TuneIn
         /// Gets the description.
         /// </summary>
         /// <value>The description.</value>
-        public override string Description => "TuneIn streams in your collection.";
+        public override string Description => "Listen to free internet radio, sports, music, news, talk and podcasts.";
 
         /// <summary>
         /// Gets the instance.

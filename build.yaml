@@ -1,0 +1,16 @@
+---
+name: "jellyfin-plugin-tunein"
+guid: "74df8a55-7332-4d3e-9c45-6f225b06fcf7"
+version: "1.0.0"
+nicename: "TuneIn"
+description: "Listen to free internet radio, sports, music, news, talk and podcasts."
+overview: >
+  Listen to free internet radio, sports, music, news, talk and podcasts. Allows you to easily
+  browse TuneIn's collection of streaming audio sources from within Jellyfin.
+category: "General"
+artifacts:
+  - "Jellyfin.Plugin.TuneIn.dll"
+  - "HtmlAgilityPack.dll"
+build_type: "dotnet"
+dotnet_configuration: "Release"
+dotnet_framework: "netstandard2.0"
