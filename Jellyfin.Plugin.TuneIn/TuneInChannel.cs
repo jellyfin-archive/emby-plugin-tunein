@@ -528,21 +528,21 @@ namespace Jellyfin.Plugin.TuneIn
         public String GetDefaultImages(String name)
         {
             if (name == "Local Radio")
-                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-localradio.png";
+                return GetType().Namespace + ".Images.tunein-localradio.png";
             if (name == "By Language")
-                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylanguage.png";
+                return GetType().Namespace + ".Images.tunein-bylanguage.png";
             if (name == "By Location")
-                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylocation.png";
+                return GetType().Namespace + ".Images.tunein-bylocation.png";
             if (name == "Music")
-                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-music.png";
+                return GetType().Namespace + ".Images.tunein-music.png";
             if (name == "My Favorites")
-                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-myfavs.png";
+                return GetType().Namespace + ".Images.tunein-myfavs.png";
             if (name == "Podcasts")
-                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-podcasts.png";
+                return GetType().Namespace + ".Images.tunein-podcasts.png";
             if (name == "Sports")
-                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-sports.png";
+                return GetType().Namespace + ".Images.tunein-sports.png";
             if (name == "Talk")
-                return "https://raw.githubusercontent.com/jellyfin/jellyfin-plugin-tunein/master/MediaBrowser.Plugins.TuneIn/Images/tunein-talk.png";
+                return GetType().Namespace + ".Images.tunein-talk.png";
 
             return "";
         }
