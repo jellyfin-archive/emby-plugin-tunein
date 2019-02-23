@@ -7,7 +7,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Common.Extensions;
 using System.Linq;
 
-namespace MediaBrowser.Plugins.TuneIn
+namespace Jellyfin.Plugin.TuneIn
 {
     public class ChannelMediaInfo
     {

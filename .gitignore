@@ -35,6 +35,11 @@ ProgramData*/
 ProgramData-Server*/
 ProgramData-UI*/
 
+######################
+## Visual Studio Code
+######################
+.vscode
+
 #################
 ## Visual Studio
 #################
@@ -228,3 +233,5 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+**/obj

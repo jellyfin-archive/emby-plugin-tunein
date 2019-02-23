@@ -10,7 +10,7 @@ using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Channels;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -20,7 +20,7 @@ using MediaBrowser.Common;
 using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Dto;
 
-namespace MediaBrowser.Plugins.TuneIn
+namespace Jellyfin.Plugin.TuneIn
 {
     public class TuneInChannel : IChannel, IRequiresMediaInfoCallback, IHasCacheKey
     {
@@ -28,15 +28,15 @@ namespace MediaBrowser.Plugins.TuneIn
         private readonly ILogger _logger;
         private readonly IApplicationHost _appHost;
 
-        private String partnerid { get; set; }
+        // private String partnerid { get; set; }
 
-        public TuneInChannel(IHttpClient httpClient, ILogManager logManager, IApplicationHost appHost)
+        public TuneInChannel(IHttpClient httpClient, ILoggerFactory loggerFactory, IApplicationHost appHost)
         {
             _httpClient = httpClient;
             _appHost = appHost;
-            _logger = logManager.GetLogger(GetType().Name);
+            _logger = loggerFactory.CreateLogger(GetType().Name);
 
-            partnerid = "uD1X52pA";
+            // partnerid = "uD1X52pA";
         }
 
         public string DataVersion
@@ -62,43 +62,57 @@ namespace MediaBrowser.Plugins.TuneIn
         {
             var items = new List<ChannelItemInfo>();
 
-            _logger.Debug("Category ID " + query.FolderId);
+            _logger.LogDebug("Category ID " + query.FolderId);
 
-            if (string.IsNullOrWhiteSpace(query.FolderId))
-            {
-                items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
-
-                if (Plugin.Instance.Configuration.Username != null)
+            try {
+                if (string.IsNullOrWhiteSpace(query.FolderId))
                 {
-                    items.Add(new ChannelItemInfo
+                    items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
+
+                    if (!string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.Username))
                     {
-                        Name = "My Favorites",
-                        Id = "preset_",
-                        Type = ChannelItemType.Folder,
-                        ImageUrl = GetDefaultImages("My Favorites")
-                    });
-                }
-            }
-            else
-            {
-                var channelID = query.FolderId.Split('_');
-
-
-                if (channelID[0] == "preset")
-                {
-                    items = await GetPresets(query, cancellationToken);
+                        items.Add(new ChannelItemInfo
+                        {
+                            Name = "My Favorites",
+                            Id = "preset_",
+                            Type = ChannelItemType.Folder,
+                            ImageUrl = GetDefaultImages("My Favorites")
+                        });
+                    }
                 }
                 else
                 {
-                    query.FolderId = channelID[1].Replace("&amp;", "&");
+                    var channelID = query.FolderId.Split('_');
 
-                    if (channelID.Count() > 2)
+
+                    if (channelID[0] == "preset")
                     {
-                        items = await GetMenu(channelID[2], query, cancellationToken).ConfigureAwait(false);
+                        items = await GetPresets(query, cancellationToken);
                     }
                     else
-                        items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
+                    {
+                        query.FolderId = channelID[1].Replace("&amp;", "&");
+
+                        if (channelID.Count() > 2)
+                        {
+                            items = await GetMenu(channelID[2], query, cancellationToken).ConfigureAwait(false);
+                        }
+                        else
+                            items = await GetMenu("", query, cancellationToken).ConfigureAwait(false);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Could not load channel items for TuneIn due to fatal error!");
+                _logger.LogError(ex.ToString());
+                items.Add(new ChannelItemInfo
+                {
+                    Name = "Fatal Error!",
+                    Id = "",
+                    Type = ChannelItemType.Folder,
+                    ImageUrl = GetDefaultImages("Fatal Error!")
+                });
             }
 
             return new ChannelItemResult()
@@ -112,8 +126,8 @@ namespace MediaBrowser.Plugins.TuneIn
         {
             var page = new HtmlDocument();
             var items = new List<ChannelItemInfo>();
-            var url = "http://opml.radiotime.com/Browse.ashx?c=presets&formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
-                      _appHost.SystemId;
+            // "&partnerid=" + partnerid + ""
+            var url = "https://opml.radiotime.com/Browse.ashx?c=presets&formats=mp3,aac&serial=" + _appHost.SystemId;
 
             if (Plugin.Instance.Configuration.Username != null)
             {
@@ -174,8 +188,8 @@ namespace MediaBrowser.Plugins.TuneIn
         {
             var page = new HtmlDocument();
             var items = new List<ChannelItemInfo>();
-            var url = "http://opml.radiotime.com/Browse.ashx?formats=mp3,aac&partnerid=" + partnerid + "&serial=" +
-                      _appHost.SystemId;
+            // "&partnerid=" + partnerid + ""
+            var url = "https://opml.radiotime.com/Browse.ashx?formats=mp3,aac&serial=" + _appHost.SystemId;
 
             if (Plugin.Instance.Configuration.LatLon != null)
             {
@@ -196,66 +210,41 @@ namespace MediaBrowser.Plugins.TuneIn
                     page.Load(site, Encoding.UTF8);
                     if (page.DocumentNode != null)
                     {
-                        var body = page.DocumentNode.SelectSingleNode("//body");
+                        var rootNode = page.DocumentNode.SelectSingleNode("//body");
 
-                        if (body.SelectNodes("./outline[@url and not(@type=\"audio\")]") != null)
+                        var subNode = !String.IsNullOrEmpty(title) ? rootNode.SelectSingleNode("./outline[@text=\"" + title + "\"]") : null;
+                        if (subNode != null) rootNode = subNode;
+
+                        // Special case to expand a lone Stations subcategory
+                        var outlines = rootNode.SelectNodes("./outline");
+                        if (outlines.Count == 1 && outlines.First().GetAttributeValue("text", "none") == "Stations")
+                            rootNode = outlines.First();
+
+                        List<HtmlNode> files = new List<HtmlNode>();
+                        List<HtmlNode> folders = new List<HtmlNode>();
+
+                        var audio = rootNode.SelectNodes("./outline[@type=\"audio\" and @url]");
+                        if (audio != null)
                         {
-                            _logger.Debug("Num 1");
-
-                            if (body.SelectNodes("./outline[@text=\"Stations\"]/outline") != null)
-                            {
-                                foreach (var node in body.SelectNodes("./outline[@text=\"Stations\"]/outline"))
-                                {
-                                    items.Add(new ChannelItemInfo
-                                    {
-                                        Name = node.Attributes["text"].Value,
-                                        Id = "stream_" + node.Attributes["url"].Value,
-                                        ImageUrl = node.Attributes["image"] != null ? node.Attributes["image"].Value : "",
-                                        Type = ChannelItemType.Media,
-                                        ContentType = ChannelMediaContentType.Podcast,
-                                        MediaType = ChannelMediaType.Audio
-
-                                    });
-                                }
-                            }
-
-                            foreach (var node in body.SelectNodes("./outline[@url]"))
-                            {
-                                items.Add(new ChannelItemInfo
-                                {
-                                    Name = node.Attributes["text"].Value,
-                                    Id = "subcat_" + node.Attributes["url"].Value,
-                                    Type = ChannelItemType.Folder,
-                                    ImageUrl = GetDefaultImages(node.Attributes["text"].Value)
-                                });
-                            }
+                            _logger.LogDebug("TuneIn found audio items...");
+                            files.AddRange(audio);
                         }
-                        else if (body.SelectNodes("./outline[@url and @type=\"audio\"]") != null)
+
+                        var links = rootNode.SelectNodes("./outline[@type=\"link\" and @url]");
+                        if (links != null)
                         {
-                            _logger.Debug("Num 2");
-                            foreach (var node in body.SelectNodes("./outline[@url]"))
-                            {
-                                items.Add(new ChannelItemInfo
-                                {
-                                    Name = node.Attributes["text"].Value,
-                                    Id = "stream_" + node.Attributes["url"].Value,
-                                    Type = ChannelItemType.Media,
-                                    ContentType = ChannelMediaContentType.Podcast,
-                                    ImageUrl = node.Attributes["image"].Value,
-                                    MediaType = ChannelMediaType.Audio
-                                });
-                            }
+                            _logger.LogDebug("TuneIn found links...");
+                            folders.AddRange(links);
                         }
-                        else if (body.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]") != null && title == "")
+
+                        var subcategories = rootNode.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]");
+                        if (subcategories != null)
                         {
-                            _logger.Debug("Num 3");
-                            foreach (
-                                var node in body.SelectNodes("./outline[@text and not(@url) and not(@key=\"related\")]"))
+                            _logger.LogDebug("TuneIn found sub-categories...");
+                            foreach (var node in subcategories)
                             {
                                 if (node.Attributes["text"].Value == "No stations or shows available")
-                                {
                                     throw new Exception("No stations or shows available");
-                                }
 
                                 items.Add(new ChannelItemInfo
                                 {
@@ -265,41 +254,37 @@ namespace MediaBrowser.Plugins.TuneIn
                                 });
                             }
                         }
-                        else if (title != "")
+
+                        if (files != null)
                         {
-                            _logger.Debug("Num 4");
-                            foreach (var node in body.SelectNodes(String.Format("./outline[@text=\"{0}\"]/outline", title)))
+                            foreach (var node in files)
                             {
-                                var type = node.Attributes["type"].Value;
-                                _logger.Debug("Type : " + type);
-                                if (type == "audio")
+                                items.Add(new ChannelItemInfo
                                 {
-                                    items.Add(new ChannelItemInfo
-                                    {
-                                        Name = node.Attributes["text"].Value,
-                                        Id = "stream_" + node.Attributes["url"].Value,
-                                        Type = ChannelItemType.Media,
-                                        ContentType = ChannelMediaContentType.Podcast,
-                                        ImageUrl = node.Attributes["image"].Value,
-                                        MediaType = ChannelMediaType.Audio,
-
-                                    });
-                                }
-                                else
-                                {
-                                    var imageNode = node.Attributes["image"];
-
-                                    items.Add(new ChannelItemInfo
-                                    {
-                                        Name = node.Attributes["text"].Value,
-                                        Id = "subcat_" + node.Attributes["url"].Value,
-                                        ImageUrl = imageNode != null ? imageNode.Value : "",
-                                        Type = ChannelItemType.Folder,
-                                    });
-                                }
+                                    Name = node.Attributes["text"].Value,
+                                    Id = "stream_" + node.Attributes["url"].Value,
+                                    Type = ChannelItemType.Media,
+                                    ContentType = ChannelMediaContentType.Podcast,
+                                    MediaType = ChannelMediaType.Audio,
+                                    ImageUrl = node.Attributes["image"] != null ? node.Attributes["image"].Value : GetDefaultImages(node.Attributes["text"].Value)
+                                });
                             }
                         }
-
+                        
+                        if (folders != null)
+                        {
+                            foreach (var node in folders)
+                            {
+                                items.Add(new ChannelItemInfo
+                                {
+                                    Name = node.Attributes["text"].Value,
+                                    Id = "category_" + node.Attributes["url"].Value,
+                                    Type = ChannelItemType.Folder,
+                                    ImageUrl = node.Attributes["image"] != null ? node.Attributes["image"].Value : GetDefaultImages(node.Attributes["text"].Value)
+                                });
+                            }
+                        }
+                        
                     }
                 }
             }
@@ -316,7 +301,7 @@ namespace MediaBrowser.Plugins.TuneIn
 
             using (var outerResponse = await _httpClient.SendAsync(new HttpRequestOptions
             {
-                Url = channelID[1] + "&formats=mp3,aac",
+                Url = channelID[1].Replace("&amp;", "&"),
                 CancellationToken = CancellationToken.None
 
             }, "GET").ConfigureAwait(false))
@@ -328,16 +313,17 @@ namespace MediaBrowser.Plugins.TuneIn
                         while (!reader.EndOfStream)
                         {
                             var url = reader.ReadLine();
-                            _logger.Debug("FILE NAME : " + url.Split('/').Last().Split('?').First());
+                            _logger.LogDebug("FILE NAME : " + url.Split('/').Last().Split('?').First());
 
                             var ext = Path.GetExtension(url.Split('/').Last().Split('?').First());
-
-                            _logger.Debug("URL : " + url);
+                            
+                            _logger.LogDebug("URL : " + url);
                             if (!string.IsNullOrEmpty(ext))
                             {
-                                _logger.Debug("Extension : " + ext);
+                                _logger.LogDebug("Extension : " + ext);
                                 if (ext == ".pls")
                                 {
+                                    _logger.LogDebug("TuneIn MediaInfo request: .pls file: " + url);
                                     try
                                     {
                                         using (var response = await _httpClient.SendAsync(new HttpRequestOptions
@@ -351,27 +337,25 @@ namespace MediaBrowser.Plugins.TuneIn
                                             {
                                                 var parser = new IniParser(value);
                                                 var count = Convert.ToInt16(parser.GetSetting("playlist", "NumberOfEntries"));
-                                                _logger.Debug("COUNT : " + count);
-                                                for (var i = 0; i < count; i++)
+                                                var end = count+1;
+                                                for (var i = 1; i < end; i++)
                                                 {
-                                                    var file = parser.GetSetting("playlist", "File" + count);
-                                                    _logger.Debug("FILE : " + count + " - " + file);
+                                                    var file = parser.GetSetting("playlist", "File" + i);
 
-                                                    items.Add(new ChannelMediaInfo
-                                                    {
-                                                        Path = file.ToLower()
-                                                    }.ToMediaSource());
+                                                    if (!String.IsNullOrWhiteSpace(file))
+                                                        items.Add(GetMediaInfoFromUrl(file));
                                                 }
                                             }
                                         }
                                     }
                                     catch (Exception ex)
                                     {
-                                        _logger.Error(ex.ToString());
+                                        _logger.LogError(ex.ToString());
                                     }
                                 }
-                                else if (ext == ".m3u")
+                                else if (ext == ".m3u" || ext == ".m3u8")
                                 {
+                                    _logger.LogDebug("TuneIn MediaInfo request: .m3u file: " + url);
                                     try
                                     {
                                         using (var response = await _httpClient.SendAsync(new HttpRequestOptions
@@ -388,10 +372,8 @@ namespace MediaBrowser.Plugins.TuneIn
                                                     while (!reader2.EndOfStream)
                                                     {
                                                         var url2 = reader2.ReadLine();
-                                                        items.Add(new ChannelMediaInfo
-                                                        {
-                                                            Path = url2
-                                                        }.ToMediaSource());
+                                                        if (!String.IsNullOrWhiteSpace(url2) && !url2.StartsWith("#"))
+                                                            items.Add(GetMediaInfoFromUrl(url2));
                                                     }
                                                 }
                                             }
@@ -399,17 +381,18 @@ namespace MediaBrowser.Plugins.TuneIn
                                     }
                                     catch (Exception ex)
                                     {
-                                        _logger.Error(ex.ToString());
+                                        _logger.LogError(ex.ToString());
                                     }
                                 }
                                 else
                                 {
+                                    _logger.LogDebug("TuneIn MediaInfo request: Non-playlist file (" + ext + "): " + url);
                                     items.Add(GetMediaInfoFromUrl(url));
                                 }
                             }
                             else
                             {
-                                _logger.Debug("Normal URL");
+                                _logger.LogDebug("TuneIn MediaInfo request: No file extension: " + url);
 
                                 items.Add(GetMediaInfoFromUrl(url));
                             }
@@ -423,17 +406,56 @@ namespace MediaBrowser.Plugins.TuneIn
 
         private MediaSourceInfo GetMediaInfoFromUrl(string url)
         {
-            var container = url.EndsWith("aac", StringComparison.OrdinalIgnoreCase) ? "aac" : "mp3";
+            var urlLower = url.ToLowerInvariant();
+            var ext = Path.GetExtension(urlLower.Split('/').Last().Split('?').First());
 
-            return new ChannelMediaInfo
+            var container = "";
+
+            if (ext != null)
             {
-                Path = url,
-                Container = container,
-                AudioCodec = container,
-                AudioBitrate = 128000,
-                AudioChannels = 2,
-                SupportsDirectPlay = true
-            }.ToMediaSource();
+                if (ext == ".aac") container = "aac";
+                else if (ext == ".mp3") container = "mp3";
+                else if (ext == ".pls" || ext == ".m3u" || ext == ".m3u8")
+                    container = "playlist";
+            }
+            else
+            {
+                var pathElements = urlLower.Split('/');
+                var pathEnd = pathElements.Last().Split('?').First();
+                if (String.IsNullOrWhiteSpace(pathEnd)) pathEnd = pathElements[pathElements.Count()-2];
+
+                if (pathEnd.Contains("aac")) container = "aac";
+                else if (pathEnd.Contains("mp3")) container = "mp3";
+
+                if (String.IsNullOrWhiteSpace(container))
+                {
+                    if (urlLower.Contains("aac")) container = "aac";
+                    else if (urlLower.Contains("mp3")) container = "mp3";
+                }
+            }
+
+            if (String.IsNullOrWhiteSpace(container))
+                container = "aac";
+            
+            if (container == "playlist")
+            {
+                return new ChannelMediaInfo
+                {
+                    Path = url
+                }.ToMediaSource();
+            }
+            else
+            {
+                return new ChannelMediaInfo
+                {
+                    Path = url,
+                    Container = container,
+                    AudioCodec = container,
+                    AudioBitrate = 128000,
+                    AudioChannels = 2,
+                    SupportsDirectPlay = true
+                }.ToMediaSource();
+            }
         }
 
         public Task<DynamicImageResponse> GetChannelImage(ImageType type, CancellationToken cancellationToken)
@@ -490,7 +512,7 @@ namespace MediaBrowser.Plugins.TuneIn
 
         public string HomePageUrl
         {
-            get { return "http://www.tunein.com/"; }
+            get { return "https://www.tunein.com/"; }
         }
 
         public ChannelParentalRating ParentalRating
@@ -506,21 +528,21 @@ namespace MediaBrowser.Plugins.TuneIn
         public String GetDefaultImages(String name)
         {
             if (name == "Local Radio")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-localradio.png";
+                return GetType().Namespace + ".Images.tunein-localradio.png";
             if (name == "By Language")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylanguage.png";
+                return GetType().Namespace + ".Images.tunein-bylanguage.png";
             if (name == "By Location")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-bylocation.png";
+                return GetType().Namespace + ".Images.tunein-bylocation.png";
             if (name == "Music")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-music.png";
+                return GetType().Namespace + ".Images.tunein-music.png";
             if (name == "My Favorites")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-myfavs.png";
+                return GetType().Namespace + ".Images.tunein-myfavs.png";
             if (name == "Podcasts")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-podcasts.png";
+                return GetType().Namespace + ".Images.tunein-podcasts.png";
             if (name == "Sports")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-sports.png";
+                return GetType().Namespace + ".Images.tunein-sports.png";
             if (name == "Talk")
-                return "https://raw.githubusercontent.com/snazy2000/MediaBrowser.Channels/master/MediaBrowser.Plugins.TuneIn/Images/tunein-talk.png";
+                return GetType().Namespace + ".Images.tunein-talk.png";
 
             return "";
         }

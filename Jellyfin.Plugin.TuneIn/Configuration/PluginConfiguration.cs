@@ -1,7 +1,7 @@
 ﻿using MediaBrowser.Model.Plugins;
 using System;
 
-namespace MediaBrowser.Plugins.TuneIn.Configuration
+namespace Jellyfin.Plugin.TuneIn.Configuration
 {
     /// <summary>
     /// Class PluginConfiguration

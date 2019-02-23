@@ -4,16 +4,14 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-using MediaBrowser.Plugins.TuneIn.Configuration;
-using System.IO;
-using MediaBrowser.Model.Drawing;
+using Jellyfin.Plugin.TuneIn.Configuration;
 
-namespace MediaBrowser.Plugins.TuneIn
+namespace Jellyfin.Plugin.TuneIn
 {
     /// <summary>
     /// Class Plugin
     /// </summary>
-    public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
+    public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     {
         
         public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
@@ -34,7 +32,7 @@ namespace MediaBrowser.Plugins.TuneIn
             };
         }
 
-        private Guid _id = new Guid("10b82431-f939-4507-a8e2-9509dd3fd6ae");
+        private Guid _id = new Guid("74df8a55-7332-4d3e-9c45-6f225b06fcf7");
         public override Guid Id
         {
             get { return _id; }
@@ -53,27 +51,7 @@ namespace MediaBrowser.Plugins.TuneIn
         /// Gets the description.
         /// </summary>
         /// <value>The description.</value>
-        public override string Description
-        {
-            get
-            {
-                return "TuneIn streams in your collection.";
-            }
-        }
-
-        public Stream GetThumbImage()
-        {
-            var type = GetType();
-            return type.Assembly.GetManifestResourceStream(type.Namespace + ".Images.thumb.png");
-        }
-
-        public ImageFormat ThumbImageFormat
-        {
-            get
-            {
-                return ImageFormat.Png;
-            }
-        }
+        public override string Description => "Listen to free internet radio, sports, music, news, talk and podcasts.";
 
         /// <summary>
         /// Gets the instance.
